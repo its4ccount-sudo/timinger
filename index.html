@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Time Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background: #f3eee8;
+    }
+
+    h1{
+      text-align:center;
+      padding:20px;
+      background:#6d4c41;
+      color:white;
+      margin:0;
+    }
+
+    .container{
+      padding:15px;
+    }
+
+    .input-box{
+      background:white;
+      padding:15px;
+      border-radius:15px;
+      box-shadow:0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom:20px;
+    }
+
+    input{
+      width:100%;
+      padding:12px;
+      margin:5px 0;
+      border-radius:10px;
+      border:1px solid #ccc;
+      font-size:16px;
+    }
+
+    button{
+      width:100%;
+      padding:12px;
+      background:#8d6e63;
+      color:white;
+      border:none;
+      border-radius:10px;
+      font-size:16px;
+      margin-top:5px;
+    }
+
+    button:hover{
+      opacity:0.9;
+    }
+
+    .task-card{
+      background:white;
+      padding:15px;
+      margin-bottom:15px;
+      border-radius:15px;
+      box-shadow:0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    .task-title{
+      font-size:18px;
+      font-weight:bold;
+      margin-bottom:5px;
+    }
+
+    .task-time{
+      font-size:14px;
+      color:gray;
+      margin-bottom:10px;
+    }
+
+    .task-buttons button{
+      width:48%;
+      font-size:14px;
+    }
+
+    .done{
+      text-decoration:line-through;
+      opacity:0.6;
+    }
+
+    .urgent{
+      border-left:5px solid red;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<h1>⏰ Smart Time Manager</h1>
+
+<div class="container">
+
+  <div class="input-box">
+    <input type="text" id="taskInput" placeholder="Enter task">
+    <input type="datetime-local" id="timeInput">
+    <button onclick="addTask()">Add Task</button>
+  </div>
+
+  <div id="taskList"></div>
+
+</div>
+
+<audio id="alarmSound">
+  <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+</audio>
+
+<script>
+
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+function saveTasks(){
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+function displayTasks(){
+  let taskList = document.getElementById("taskList");
+  taskList.innerHTML = "";
+
+  tasks.forEach((task, index) => {
+
+    let now = new Date().getTime();
+    let taskTime = new Date(task.time).getTime();
+
+    let cardClass = "task-card";
+
+    if(task.done){
+      cardClass += " done";
+    }
+    else if(taskTime - now <= 60000 && taskTime > now){
+      cardClass += " urgent";
+    }
+
+    let card = `
+      <div class="${cardClass}">
+        <div class="task-title">${task.name}</div>
+        <div class="task-time">${new Date(task.time).toLocaleString()}</div>
+        <div class="task-buttons">
+          <button onclick="markDone(${index})">Done</button>
+          <button onclick="deleteTask(${index})">Delete</button>
+        </div>
+      </div>
+    `;
+
+    taskList.innerHTML += card;
+  });
+}
+
+function addTask(){
+  let name = document.getElementById("taskInput").value;
+  let time = document.getElementById("timeInput").value;
+
+  if(name === "" || time === ""){
+    alert("Please enter task and time");
+    return;
+  }
+
+  tasks.push({
+    name:name,
+    time:time,
+    done:false,
+    notified:false
+  });
+
+  saveTasks();
+  displayTasks();
+
+  document.getElementById("taskInput").value="";
+  document.getElementById("timeInput").value="";
+}
+
+function deleteTask(index){
+  tasks.splice(index,1);
+  saveTasks();
+  displayTasks();
+}
+
+function markDone(index){
+  tasks[index].done=true;
+  saveTasks();
+  displayTasks();
+}
+
+function checkTasks(){
+  let now = new Date().getTime();
+
+  tasks.forEach(task=>{
+    let taskTime = new Date(task.time).getTime();
+
+    if(now >= taskTime && !task.notified && !task.done){
+      alert("⏰ Time to do: " + task.name);
+      document.getElementById("alarmSound").play();
+      task.notified = true;
+      saveTasks();
+    }
+  });
+}
+
+setInterval(checkTasks,30000);
+
+displayTasks();
+
+</script>
+
+</body>
+</html>
